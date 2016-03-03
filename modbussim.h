@@ -44,7 +44,7 @@
 
 /* simulation parameters */
 #define DEFAULT_UPDATE_FREQ (1)
-#define DEFAULT_TARGET_RPM (127000)
+#define DEFAULT_TARGET_RPM (25000)   /* depending on rpm step, if this is too high rollover will mess things up */
 #define DEFAULT_RPM_STEP (5)    /* this should probably be larger */
 
 /* options */

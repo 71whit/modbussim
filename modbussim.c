@@ -30,7 +30,7 @@ void print_options( options_t *options ) {
     fprintf(stdout, "   Port:                           %d\n", options->port);
     fprintf(stdout, "   Update Frequency:               %d\n", options->update_frequency);
     fprintf(stdout, "   Counter Step (0 = no counting): %d\n", options->counter_step);
-    fprintf(stdout, "   Target rpm:                     %d\n", options->target_rpm);
+    fprintf(stdout, "   Target rpm:                     %u\n", options->target_rpm);
 }
 
 void get_options( int argc, char **argv, options_t *options ) {
@@ -106,7 +106,7 @@ void get_options( int argc, char **argv, options_t *options ) {
         usage();
     }
 
-    if (options->target_rpm > options->fail_threshold) {
+    if (options->target_rpm > options->fail_threshold && options->fail_threshold != 0) {
         fprintf(stderr, "WARNING: target rpm for simulation is greater than fail threshold (%u > %d)\n", options->target_rpm, options->fail_threshold);
     }
 }
@@ -135,13 +135,19 @@ int main(int argc, char **argv) {
     modbus_set_debug(ctx, TRUE);
 #endif
    
-    // allocate the registers etc.
+    /* allocate the registers etc. */
     mb_mapping = modbus_mapping_new(N_BITS, N_IN_BITS, options.num_registers, N_IN_REGISTERS);
     if (mb_mapping == NULL) {
         fprintf(stderr, "Failed to allocate new modbus mapping: %s\n",
                 modbus_strerror(errno));
         modbus_free(ctx);
         return -1;
+    }
+
+    /* initialize registers to random values */
+    int i;
+    for (i = 0; i < options.num_registers; i++ ) {
+        mb_mapping->tab_registers[i] = (rand() % 65536) - 32768;
     }
     
     /* split threads */
@@ -290,21 +296,31 @@ void *simulation( void * ptr ) {
 
         sleep(options.update_frequency);
 
-        printf("Actual RPM: %04X, RPM Register: %04X\n", actual_rpm, mb_mapping->tab_registers[options.rpm_register]);
-
         /* if the counter step is activated, then it overrides the rpm simulation */
         if (options.counter_step > 0) {
             pthread_mutex_lock( &lock );
             mb_mapping->tab_registers[options.rpm_register] += options.counter_step;
             actual_rpm = mb_mapping->tab_registers[options.rpm_register];
             pthread_mutex_unlock( &lock );
-//            printf("RPM Register (%d) value : %04X\n", options.rpm_register, mb_mapping->tab_registers[options.rpm_register]);
         } else {
             /* deliberate race condition with the server thread */
             if (mb_mapping->tab_registers[options.rpm_register] < options.target_rpm )
                 actual_rpm += DEFAULT_RPM_STEP;
             else actual_rpm -= DEFAULT_RPM_STEP; 
         }
+
+        /* in either case, update all other registers by random increments */
+        int i;
+        for (i = 0; i < options.num_registers; i++ ) {
+            if (i != options.rpm_register ) {
+                mb_mapping->tab_registers[i] += ((rand() % 4096) - 1024);
+                //printf("New register[%d] value = %u\n", i, mb_mapping->tab_registers[i]);
+            } else {
+                printf("Actual RPM: %04X, RPM Register: %04X\n", actual_rpm, mb_mapping->tab_registers[options.rpm_register]);
+            }
+        }
+
+        //printf("- - - - - - - - - - - - - - - - - - - - - - -\n");
 
         if (options.fail_threshold > 0 ) {
             if (actual_rpm > options.fail_threshold) {
