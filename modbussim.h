@@ -43,7 +43,8 @@
 #define N_IN_REGISTERS (0)
 
 /* simulation parameters */
-#define DEFAULT_UPDATE_FREQ (1)
+#define NS_PER_SEC (1000000000)
+#define DEFAULT_UPDATE_FREQ (1000000000) /* default simulation update freq (nanoseconds) */
 #define DEFAULT_TARGET_RPM (25000)   /* depending on rpm step, if this is too high rollover will mess things up */
 #define DEFAULT_RPM_STEP (5)    /* this should probably be larger */
 
@@ -53,7 +54,7 @@ typedef struct options_s {
     int rpm_register;
     int fail_threshold;
     int port;
-    int update_frequency;
+    uint64_t update_frequency;
     int counter_step;
     uint16_t target_rpm;
 } options_t;
