@@ -18,8 +18,11 @@
 #ifndef __MODBUSSIM_H__
 #define __MODBUSSIM_H__
 
+#include <alsa/asoundlib.h>
+#include <alsa/pcm.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <math.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -31,6 +34,7 @@
 #endif
 #include <modbus.h>
 
+/* for ip/tcp */
 #define IP NULL
 #define DEFAULT_PORT (1502)
 #define NUM_CONNECTIONS_ALLOWED (1)
@@ -44,8 +48,14 @@
 
 /* simulation parameters */
 #define DEFAULT_UPDATE_FREQ (1)
+#define DEFAULT_UPDATE_STEP (20)
 #define DEFAULT_TARGET_RPM (25000)   /* depending on rpm step, if this is too high rollover will mess things up */
-#define DEFAULT_RPM_STEP (5)    /* this should probably be larger */
+
+/* for sound */
+#define SND_BUFFER_LEN (41000)
+#define SND_RATE (41000)
+#define SND_LO_FREQ (250)
+#define SND_HI_FREQ (1500)
 
 /* options */
 typedef struct options_s {
@@ -54,6 +64,7 @@ typedef struct options_s {
     int fail_threshold;
     int port;
     int update_frequency;
+    int update_step;
     int counter_step;
     uint16_t target_rpm;
 } options_t;
@@ -65,12 +76,16 @@ static int server_socket = -1;          /* server's socket */
 static int halt_flag = 0;                
 options_t options;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+uint16_t actual_rpm = 0;
 
 /* the server thread function */
 void *server( void *ptr );
 
 /* the simulation thread function */
 void *simulation( void *ptr );
+
+/* the sound thread */
+void *sound( void *ptr );
 
 /* process input options */
 void get_options( int argc, char **argv, options_t *options);

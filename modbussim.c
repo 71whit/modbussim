@@ -4,6 +4,13 @@
  *
  * Modified and expanded by Whit Schonbein Spring 2016  
  *
+ * Requires the libmodbus libraries available here:
+ *  https://github.com/stephane/libmodbus.git
+ *
+ * To enable the audio sine wave output, compile with the -D SOUND flag.
+ * Audio outout uses the alsa libraries, i.e., alsa-lib, alsa-utils, and 
+ * comile with the -lasound library. 
+ * 
  */
 
 #include "modbussim.h"
@@ -17,6 +24,7 @@ void usage() {
     fprintf(stdout, "   -f <int> : set fail threshold to <int>\n");
     fprintf(stdout, "   -p <int> : use port number <int>\n");
     fprintf(stdout, "   -r <int> : set rpm register to <int> (default is random)\n");
+    fprintf(stdout, "   -s <int> : set update step for rpm register (default is %d)\n", DEFAULT_UPDATE_STEP);
     fprintf(stdout, "   -t <uint16_t> : set target rpm to <int> in simulation\n");
     fprintf(stdout, "   -u <int> : set simulation update frequency to <int> seconds (default 1)\n");
     exit(-1);
@@ -29,6 +37,7 @@ void print_options( options_t *options ) {
     fprintf(stdout, "   Fail Threshold (0 = no fail):   %d\n", options->fail_threshold);
     fprintf(stdout, "   Port:                           %d\n", options->port);
     fprintf(stdout, "   Update Frequency:               %d\n", options->update_frequency);
+    fprintf(stdout, "   Update Step:                    %d\n", options->update_step);
     fprintf(stdout, "   Counter Step (0 = no counting): %d\n", options->counter_step);
     fprintf(stdout, "   Target rpm:                     %u\n", options->target_rpm);
 }
@@ -44,8 +53,9 @@ void get_options( int argc, char **argv, options_t *options ) {
     options->update_frequency = DEFAULT_UPDATE_FREQ;
     options->counter_step = 0;
     options->target_rpm = (uint16_t)DEFAULT_TARGET_RPM;
+    options->update_step = DEFAULT_UPDATE_STEP;
 
-    while ((c = getopt(argc, argv, "c:f:hp:r:R:t:u:")) != -1 ) {
+    while ((c = getopt(argc, argv, "c:f:hp:r:R:s:t:u:")) != -1 ) {
         switch (c) {
             case 'c':
                 options->counter_step = atoi(optarg);
@@ -69,6 +79,9 @@ void get_options( int argc, char **argv, options_t *options ) {
                 break;
             case 'u':
                 options->update_frequency = atoi(optarg);
+                break;
+            case 's':
+                options->update_step = atoi(optarg);
                 break;
             case '?':
                 fprintf(stderr, "Unknown option: -%c\n", c);
@@ -114,7 +127,7 @@ void get_options( int argc, char **argv, options_t *options ) {
 int main(int argc, char **argv) {
     
     /* for threads */
-    pthread_t server_thread, simulation_thread;
+    pthread_t server_thread, simulation_thread, sound_thread;
     int ret;
 
     /* in case we need it */
@@ -167,12 +180,24 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+#ifdef SOUND
+    ret = pthread_create( &sound_thread, NULL, sound, NULL);
+    if (ret) {
+        perror("Failed to create sound thread");
+        modbus_free(ctx);
+        modbus_mapping_free(mb_mapping);
+        return -1;
+    }
+#endif
+
     /* wait for whatever */
     pthread_join( server_thread, NULL );
     pthread_join( simulation_thread, NULL );
+#ifdef SOUND
+    pthread_join( sound_thread, NULL );
+#endif
 
     /* clean up and exit */
-
     return 0;
 }
 
@@ -278,8 +303,9 @@ void *simulation( void * ptr ) {
     
     uint16_t counter = 0x0;
 
-    /* start the simulation with the rpms at the target */
-    uint16_t actual_rpm = options.target_rpm;
+    pthread_mutex_lock( &lock );
+    actual_rpm = options.target_rpm;
+    pthread_mutex_unlock( &lock );
 
     for(;;) {
             
@@ -305,8 +331,8 @@ void *simulation( void * ptr ) {
         } else {
             /* deliberate race condition with the server thread */
             if (mb_mapping->tab_registers[options.rpm_register] < options.target_rpm )
-                actual_rpm += DEFAULT_RPM_STEP;
-            else actual_rpm -= DEFAULT_RPM_STEP; 
+                actual_rpm += options.update_step;
+            else actual_rpm -= options.update_step; 
         }
 
         /* in either case, update all other registers by random increments */
@@ -316,11 +342,10 @@ void *simulation( void * ptr ) {
                 mb_mapping->tab_registers[i] += ((rand() % 4096) - 1024);
                 //printf("New register[%d] value = %u\n", i, mb_mapping->tab_registers[i]);
             } else {
-                printf("Actual RPM: %04X, RPM Register: %04X\n", actual_rpm, mb_mapping->tab_registers[options.rpm_register]);
+                //printf("Actual RPM: %04X, RPM Register: %04X\n", actual_rpm, mb_mapping->tab_registers[options.rpm_register]);
+                printf("Actual RPM: %d, RPM Register: %d\n", actual_rpm, mb_mapping->tab_registers[options.rpm_register]);
             }
         }
-
-        //printf("- - - - - - - - - - - - - - - - - - - - - - -\n");
 
         if (options.fail_threshold > 0 ) {
             if (actual_rpm > options.fail_threshold) {
@@ -336,3 +361,78 @@ void *simulation( void * ptr ) {
 
     return NULL;
 }
+
+#ifdef SOUND
+
+void *sound( void *ptr ) {
+
+    static char *snd_device = "default";
+    float snd_buffer[SND_BUFFER_LEN];
+
+    int snd_err;
+    int i;
+
+    snd_pcm_t *snd_handle;
+    snd_pcm_sframes_t snd_frames;
+
+    snd_err = snd_pcm_open( &snd_handle, snd_device, SND_PCM_STREAM_PLAYBACK, 0);
+    if (snd_err < 0) {
+        fprintf(stderr, "Playback open error %s\n", snd_strerror(snd_err));
+    }
+
+    snd_err = snd_pcm_set_params( snd_handle, SND_PCM_FORMAT_FLOAT, SND_PCM_ACCESS_RW_INTERLEAVED, 1, SND_RATE, 1, 500000);
+    if (snd_err < 0) {
+        fprintf(stderr, "Set parameters error %s\n", snd_strerror(snd_err));
+    }
+
+    int current_freq = SND_LO_FREQ;
+    float slope;
+    if ( options.fail_threshold != 0 ) 
+        slope = (SND_HI_FREQ - SND_LO_FREQ) / (float)(options.fail_threshold - options.target_rpm);
+    else slope = (SND_HI_FREQ - SND_LO_FREQ) / (float)(USHRT_MAX - actual_rpm);
+
+    for (;;) {
+        
+        if (halt_flag) {
+            snd_pcm_close(snd_handle);
+            return NULL;
+        }
+
+        /* get current frequency */
+        pthread_mutex_lock( &lock );
+        if (actual_rpm <= options.target_rpm) {
+            current_freq = SND_LO_FREQ;
+        } else {
+            current_freq = (int)(SND_LO_FREQ + (slope * (actual_rpm - options.target_rpm)));
+        }
+        printf("current freq = %d\n", current_freq);
+        pthread_mutex_unlock( &lock );
+
+        /* fill buffer */
+        for (i = 0; i < SND_BUFFER_LEN; i++) {
+            snd_buffer[i] = sin(2*M_PI*current_freq/SND_RATE*i);
+        }
+
+        /* play */
+        snd_frames = snd_pcm_writei(snd_handle, snd_buffer, SND_BUFFER_LEN);
+
+        if (snd_frames < 0)
+            snd_frames = snd_pcm_recover(snd_handle, snd_frames, 0);
+        if (snd_frames < 0) {
+            fprintf(stderr, "snd_pcm_writei failed %s\n", snd_strerror(snd_frames));
+            break;
+        }
+
+        if (snd_frames > 0 && snd_frames < SND_BUFFER_LEN)
+            fprintf(stderr, "Short write (expected %li, wrote %li)\n", SND_BUFFER_LEN, snd_frames);
+    }
+
+    snd_pcm_close(snd_handle);
+    pthread_mutex_lock( &lock );
+    halt_flag = 1;
+    pthread_mutex_unlock( &lock );
+
+    return NULL;
+}
+
+#endif /* SOUND */
