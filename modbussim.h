@@ -47,9 +47,11 @@
 #define N_IN_REGISTERS (0)
 
 /* simulation parameters */
-#define DEFAULT_UPDATE_FREQ (1)
+#define DEFAULT_UPDATE_FREQ (1000000000)
 #define DEFAULT_UPDATE_STEP (20)
 #define DEFAULT_TARGET_RPM (25000)   /* depending on rpm step, if this is too high rollover will mess things up */
+
+#define NS_PER_SEC (1000000000)
 
 /* for sound */
 #define SND_BUFFER_LEN (41000)
@@ -84,8 +86,10 @@ void *server( void *ptr );
 /* the simulation thread function */
 void *simulation( void *ptr );
 
+#ifdef SOUND
 /* the sound thread */
 void *sound( void *ptr );
+#endif
 
 /* process input options */
 void get_options( int argc, char **argv, options_t *options);

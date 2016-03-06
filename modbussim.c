@@ -9,7 +9,7 @@
  *
  * To enable the audio sine wave output, compile with the -D SOUND flag.
  * Audio outout uses the alsa libraries, i.e., alsa-lib, alsa-utils, and 
- * comile with the -lasound library. 
+ * compile with the -lasound library. 
  * 
  */
 
@@ -25,8 +25,8 @@ void usage() {
     fprintf(stdout, "   -p <int> : use port number <int>\n");
     fprintf(stdout, "   -r <int> : set rpm register to <int> (default is random)\n");
     fprintf(stdout, "   -s <int> : set update step for rpm register (default is %d)\n", DEFAULT_UPDATE_STEP);
-    fprintf(stdout, "   -t <uint16_t> : set target rpm to <int> in simulation\n");
-    fprintf(stdout, "   -u <int> : set simulation update frequency to <int> seconds (default 1)\n");
+    fprintf(stdout, "   -t <uint16_t> : set target rpm to <uint_16> in simulation\n");
+    fprintf(stdout, "   -u <uint> : set simulation update frequency to <uint> nanoseconds (default 1000000000, (1 sec)))\n");
     exit(-1);
 }
 
@@ -34,12 +34,12 @@ void print_options( options_t *options ) {
     fprintf(stdout, "Using the following options:\n");
     fprintf(stdout, "   Number of registers:            %d\n", options->num_registers);
     fprintf(stdout, "   RPM Register:                   %d\n", options->rpm_register);
+    fprintf(stdout, "   Target rpm:                     %u\n", options->target_rpm);
     fprintf(stdout, "   Fail Threshold (0 = no fail):   %d\n", options->fail_threshold);
     fprintf(stdout, "   Port:                           %d\n", options->port);
     fprintf(stdout, "   Update Frequency:               %d\n", options->update_frequency);
     fprintf(stdout, "   Update Step:                    %d\n", options->update_step);
     fprintf(stdout, "   Counter Step (0 = no counting): %d\n", options->counter_step);
-    fprintf(stdout, "   Target rpm:                     %u\n", options->target_rpm);
 }
 
 void get_options( int argc, char **argv, options_t *options ) {
@@ -78,7 +78,7 @@ void get_options( int argc, char **argv, options_t *options ) {
                 options->target_rpm = atoi(optarg);
                 break;
             case 'u':
-                options->update_frequency = atoi(optarg);
+                options->update_frequency = strtoull(optarg, NULL, 10);
                 break;
             case 's':
                 options->update_step = atoi(optarg);
@@ -110,7 +110,7 @@ void get_options( int argc, char **argv, options_t *options ) {
     }
 
     if (options->update_frequency < 1) {
-        fprintf(stderr, "invalid update frequency (%d)\n", options->update_frequency);
+        fprintf(stderr, "invalid update frequency (%ld)\n", options->update_frequency);
         usage();
     }
 
@@ -302,10 +302,14 @@ void *server( void * ptr ) {
 void *simulation( void * ptr ) {
     
     uint16_t counter = 0x0;
-
     pthread_mutex_lock( &lock );
     actual_rpm = options.target_rpm;
     pthread_mutex_unlock( &lock );
+    
+    /* for nanosleep */
+    struct timespec update_freq;
+    update_freq.tv_sec = options.update_frequency / NS_PER_SEC;
+    update_freq.tv_nsec = options.update_frequency % NS_PER_SEC;
 
     for(;;) {
             
@@ -320,7 +324,7 @@ void *simulation( void * ptr ) {
             pthread_mutex_unlock( &lock );
         }
 
-        sleep(options.update_frequency);
+        nanosleep(&update_freq, NULL);
 
         /* if the counter step is activated, then it overrides the rpm simulation */
         if (options.counter_step > 0) {
@@ -405,7 +409,6 @@ void *sound( void *ptr ) {
         } else {
             current_freq = (int)(SND_LO_FREQ + (slope * (actual_rpm - options.target_rpm)));
         }
-        printf("current freq = %d\n", current_freq);
         pthread_mutex_unlock( &lock );
 
         /* fill buffer */
