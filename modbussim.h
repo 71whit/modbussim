@@ -18,8 +18,11 @@
 #ifndef __MODBUSSIM_H__
 #define __MODBUSSIM_H__
 
+#ifdef SOUND 
 #include <alsa/asoundlib.h>
 #include <alsa/pcm.h>
+#endif
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <math.h>
