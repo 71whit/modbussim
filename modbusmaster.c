@@ -13,7 +13,7 @@
 
 #include <modbus.h>
 
-#define IP "192.168.1.22"
+#define IP "10.0.0.11"
 #define PORT (1502)
 
 int modbus_end(modbus_t *ctx) {
@@ -24,22 +24,23 @@ int modbus_end(modbus_t *ctx) {
 
 int main(int argc, char **argv) {
 
-    if (argc != 4) {
-        fprintf(stdout, "\nUsage: %s <register address (hex)> <16 bit value (hex)> <freq>\n\n", argv[0]);
+    if (argc != 5) {
+        fprintf(stdout, "\nUsage: %s <port> <register address (hex)> <16 bit value (hex)> <freq>\n\n", argv[0]);
         return -1;
     }
 
-    uint16_t value = (uint16_t)strtoul(argv[2], NULL, 16);
-    uint16_t address = (uint16_t)strtoul(argv[1], NULL, 16);
-    int freq = atoi(argv[3]);
+    int port = atoi(argv[1]);
+    uint16_t address = (uint16_t)strtoul(argv[2], NULL, 16);
+    uint16_t value = (uint16_t)strtoul(argv[3], NULL, 16);
+    int freq = atoi(argv[4]);
     uint16_t *register_values = malloc(sizeof(*register_values));
 
-    printf("value = %X, address = %X, freq = $d\n", value, address, freq);
+    printf("value = %X, port = %d, address = %X, freq = $d\n", value, port, address, freq);
     printf("If freq != 0, ctrl-c to quit\n");
 
-    modbus_t *ctx = modbus_new_tcp(IP, PORT);
+    modbus_t *ctx = modbus_new_tcp(IP, port);
     if (modbus_connect(ctx) == -1) {
-        fprintf(stderr, "Connection to %s port %d failed: %s\n", IP, PORT, modbus_strerror(errno));
+        fprintf(stderr, "Connection to %s port %d failed: %s\n", IP, port, modbus_strerror(errno));
         modbus_end(ctx);
         return -1;
     }
