@@ -56,7 +56,7 @@ void get_options(int argc, char **argv, options_t *options)
 	options->registerAddress = -1;
 	options->targetRPM = 5000;
 
-	while((optionCase = getopt(argc,argv, "i:rph")) != -1)
+	while((optionCase = getopt(argc,argv, "i:t:r:p:h")) != -1)
 	{
 		switch(optionCase)
 		{
@@ -73,6 +73,9 @@ void get_options(int argc, char **argv, options_t *options)
 				printUsageInfo();
 				exit(-1);
 				break;
+            case 't':
+                options->targetRPM = atoi(optarg);
+                break;
 			case '?':
 				fprintf(stderr, "Missing options");
 				printUsageInfo();

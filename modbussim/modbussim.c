@@ -147,7 +147,13 @@ int main(int argc, char **argv) {
 #ifdef DEBUG
     modbus_set_debug(ctx, TRUE);
 #endif
-   
+
+    // set as tcp slave
+    if (modbus_set_slave(ctx, MODBUS_TCP_SLAVE) != 0) {
+        fprintf(stderr, "Failed to set modbus tcp slave number: %\n", modbus_strerror(errno));
+        return -1;
+    }
+
     /* allocate the registers etc. */
     mb_mapping = modbus_mapping_new(N_BITS, N_IN_BITS, options.num_registers, N_IN_REGISTERS);
     if (mb_mapping == NULL) {

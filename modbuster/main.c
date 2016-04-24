@@ -103,14 +103,16 @@ int main(int argc, char **argv)
 				return -1;
 			}
 		}
+        fprintf(stdout, "Checking slave ID...");
 		err = modbus_report_slave_id(modbusConnection, 127, req_unit8);
 		if(err == -1)
 		{
-			fprintf(stderr, "Are you sure this is a modbus connection? Error code checking failed: %s\n", modbus_strerror(errno));
+			fprintf(stderr, "Are you sure this is a modbus connection? Slave ID checking failed: %s\n", modbus_strerror(errno));
 			modbus_close(modbusConnection);
 			modbus_free(modbusConnection);
 			return -1;
 		}
+        fprintf(stdout, "Slave ID checked");
 	}
 
 
@@ -130,23 +132,22 @@ int main(int argc, char **argv)
 			}
 	}
 
-	/*	while(err != -1) //Doing it this way for now, will come up with better solution at a later time
-			{
-			err = modbus_write_register(modbusConnection, options.registerAddress, 0);
-			}
-			*/
+    while(err != -1) //Doing it this way for now, will come up with better solution at a later time
+    {
+            err = modbus_write_register(modbusConnection, options.registerAddress, 0);
+    }
 
-	err = modbus_write_register(modbusConnection, options.registerAddress, 0);
-	if(err == -1)
-	{
-		fprintf(stderr, "Writing to register failed: %s\n", modbus_strerror(errno));
-		modbus_close(modbusConnection);
-		modbus_free(modbusConnection);
-		return -1;
-	}
+    err = modbus_write_register(modbusConnection, options.registerAddress, 0);
+    if(err == -1)
+    {
+            fprintf(stderr, "Writing to register failed: %s\n", modbus_strerror(errno));
+            modbus_close(modbusConnection);
+            modbus_free(modbusConnection);
+            return -1;
+    }
 
-	modbus_close(modbusConnection);
-	modbus_free(modbusConnection);
-	return 0;
+    modbus_close(modbusConnection);
+    modbus_free(modbusConnection);
+    return 0;
 }
 
