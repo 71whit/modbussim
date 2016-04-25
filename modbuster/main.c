@@ -31,6 +31,7 @@ int naivePortScan(int startingPort, char *ipAddress)
 	int err; //Used for checking of modbus calls
 	modbus_t *modbusConnection;
 	uint8_t req_unit8[128]; //used to store exception info
+	uint16_t register_values[128]; //registry
 
 
 	for(i = startingPort; i < 65536; ++i)
@@ -50,15 +51,22 @@ int naivePortScan(int startingPort, char *ipAddress)
 				err = modbus_reply_exception(modbusConnection, req_unit8, j);
 				if(err == -1)
 				{
-					modbus_close(modbusConnection);
-					modbus_free(modbusConnection);
 					break; //We've found an error code that doesn't work, so break out of the loop
 				}
 			}
 			if(j == 12)
 			{
-				break; //We've found a port that might work, so break out of the loop
+				err = modbus_read_registers(modbusConnection, 0, 1, register_values);
+				if(err == -1)
+				{
+				}
+				else
+				{
+					break; //We've found a port that might work, so break out of the loop
+				}
 			}
+			modbus_close(modbusConnection);
+			modbus_free(modbusConnection);
 		}
 	}
 	if(port >= 65536)
@@ -78,7 +86,7 @@ int main(int argc, char **argv)
 	options_t options;
 	modbus_t *modbusConnection;
 	uint8_t req_unit8[128];
-	uint16_t reg[128];
+	uint16_t register_values[128];
 
 	get_options(argc, argv, &options);
 	print_options(&options);
@@ -101,18 +109,6 @@ int main(int argc, char **argv)
 			modbus_free(modbusConnection);
 			return -1;
 		}
-		//Verify that the ip/port pair is likely modbus
-		for(j = 1; j < 12; ++j)
-		{
-			err = modbus_reply_exception(modbusConnection,req_unit8, j);
-			if(err == -1)
-			{
-				fprintf(stderr, "Are you sure this is a modbus connection? Error code checking failed: %s\n", modbus_strerror(errno));
-				modbus_close(modbusConnection);
-				modbus_free(modbusConnection);
-				return -1;
-			}
-		}
 	}
 
 	//Auto register finding
@@ -122,9 +118,9 @@ int main(int argc, char **argv)
 		err = 0;
 		while(err != -1)
 		{
-			err = modbus_read_registers(modbusConnection, i, 1, reg);
+			err = modbus_read_registers(modbusConnection, i, 1, register_values);
 
-			if(abs(reg[0] - options.targetRPM) <= options.tolerence)
+			if(abs(register_values[0] - options.targetRPM) <= options.tolerence)
 			{
 				options.registerAddress = i;
 				break;
@@ -135,14 +131,18 @@ int main(int argc, char **argv)
 	if(options.registerAddress == -1) //make sure somethine was actually found
 	{
 			fprintf(stderr, "No registers found within expected range\n");
+			modbus_close(modbusConnection);
+			modbus_free(modbusConnection);
 			return -1;
 	}
 
 	//Double check register
-	err = modbus_read_registers(modbusConnection, options.registerAddress, 1, reg);
+	err = modbus_read_registers(modbusConnection, options.registerAddress, 1, register_values);
 	if (err == -1)
 	{
 		fprintf(stderr, "Reading register failed: %s\n", modbus_strerror(errno));
+		modbus_close(modbusConnection);
+		modbus_free(modbusConnection);
 		return -1;
 	}
 
