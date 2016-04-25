@@ -131,9 +131,23 @@ void print_options(options_t *options)
 {
 	fprintf(stdout, "Using the following options:\n");
 	fprintf(stdout, "\t IP Address: %s\n", options->ipAddress);
-	fprintf(stdout, "\t Port: %d\n", options->port);
-	fprintf(stdout, "\t Register Address: %d\n", options->registerAddress);
-	fprintf(stdout, "\t Target RPM: %d\n", options->targetRPM);
-	fprintf(stdout, "\t Target RPM Tolerence: %d\n", options->tolerence);
+	if( options->port == 0)
+	{
+		fprintf(stdout, "\t Port: %s\n", "auto");
+	}
+	else
+	{
+		fprintf(stdout, "\t Port: %d\n", options->port);
+	}
+	if( options->registerAddress == -1)
+	{
+		fprintf(stdout, "\t Register Address: %s\n", "auto");
+		fprintf(stdout, "\t Target RPM: %d\n", options->targetRPM);
+		fprintf(stdout, "\t Target RPM Tolerence: +-%d\n", options->tolerence);
+	}
+	else
+	{
+		fprintf(stdout, "\t Register Address: %d\n", options->registerAddress);
+	}
 }
 
