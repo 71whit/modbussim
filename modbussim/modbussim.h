@@ -53,6 +53,7 @@
 #define DEFAULT_UPDATE_FREQ (1000000000)
 #define DEFAULT_UPDATE_STEP (20)
 #define DEFAULT_TARGET_RPM (25000)   /* depending on rpm step, if this is too high rollover will mess things up */
+#define DEFAULT_FAIL_THRESHOLD (0)  /* if 0, default is to never fail */
 
 #define NS_PER_SEC (1000000000)
 
