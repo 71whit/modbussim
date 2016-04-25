@@ -8,10 +8,10 @@ options.o: options.c options.h
 main.o: main.c options.h
 	$(CC) $(IFLAGS) -c main.c -o main.o
 
-attack_modbussim.exe: main.o options.o
-	$(CC) main.o options.o $(LFLAGS) -o attack_modbussim.exe
+modbuster.exe: main.o options.o
+	$(CC) main.o options.o $(LFLAGS) -o modbuster.exe
 
-all: attack_modbussim.exe
+all: modbuster.exe
 
 clean:
 	rm *.o *.exe
