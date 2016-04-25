@@ -21,11 +21,11 @@ void usage() {
     fprintf(stdout, "\nwhere:\n");
     fprintf(stdout, "   -R <int> : number of registers (required)\n");
     fprintf(stdout, "   -c <int> : enable monotone counter on rpm register with step size <int>\n");
-    fprintf(stdout, "   -f <int> : set fail threshold to <int>\n");
-    fprintf(stdout, "   -p <int> : use port number <int>\n");
-    fprintf(stdout, "   -r <int> : set rpm register to <int> (default is random)\n");
-    fprintf(stdout, "   -s <int> : set update step for rpm register (default is %d)\n", DEFAULT_UPDATE_STEP);
-    fprintf(stdout, "   -t <uint16_t> : set target rpm to <uint_16> in simulation\n");
+    fprintf(stdout, "   -f <int> : set fail rpm threshold to <int> (default = 0 (never fail))\n", DEFAULT_FAIL_THRESHOLD);
+    fprintf(stdout, "   -p <int> : use port number <int> (default = %d)\n", DEFAULT_PORT);
+    fprintf(stdout, "   -r <int> : set rpm register to register #<int> (default is random)\n");
+    fprintf(stdout, "   -s <int> : set update step for rpm register (default = %d)\n", DEFAULT_UPDATE_STEP);
+    fprintf(stdout, "   -t <uint16_t> : set target rpm to <uint_16> in simulation (default = %d)\n", DEFAULT_TARGET_RPM);
     fprintf(stdout, "   -u <uint> : set simulation update frequency to <uint> nanoseconds (default 1000000000, (1 sec)))\n");
     exit(-1);
 }
@@ -48,7 +48,7 @@ void get_options( int argc, char **argv, options_t *options ) {
     int c;
     options->num_registers = -1;
     options->rpm_register = -1;
-    options->fail_threshold = 0;
+    options->fail_threshold = DEFAULT_FAIL_THRESHOLD;
     options->port = DEFAULT_PORT;
     options->update_frequency = DEFAULT_UPDATE_FREQ;
     options->counter_step = 0;
@@ -345,11 +345,12 @@ void *simulation( void * ptr ) {
             else actual_rpm -= options.update_step; 
         }
 
-        /* in either case, update all other registers by random increments */
+        /* in either case, update all other registers by random increments.
+         * rollover is ok */ 
         int i;
         for (i = 0; i < options.num_registers; i++ ) {
             if (i != options.rpm_register ) {
-                mb_mapping->tab_registers[i] += ((rand() % 4096) - 1024);
+                mb_mapping->tab_registers[i] += ((rand() % 4096) - 2048);
                 //printf("New register[%d] value = %u\n", i, mb_mapping->tab_registers[i]);
             } else {
                 //printf("Actual RPM: %04X, RPM Register: %04X\n", actual_rpm, mb_mapping->tab_registers[options.rpm_register]);
