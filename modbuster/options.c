@@ -31,7 +31,7 @@ bool isValidIpAddress(char *ipAddress)
 }
 
 void printUsageInfo(void) {
-	fprintf(stdout, "Usage: attack_modbussim.exe required_options [options]\n");
+	fprintf(stdout, "Usage: modbuster.exe required_options [options]\n");
 	fprintf(stdout, "Required Options:\n");
 	fprintf(stdout, "\t-i <ip_address> \t Connect to PLC at IP address <ip_address>\n");
 	fprintf(stdout, "Options:\n");
@@ -45,6 +45,7 @@ void printUsageInfo(void) {
 void get_options(int argc, char **argv, options_t *options)
 {
 	bool throwError = false;
+	bool missingIP = true;
 	extern char *optarg;
 	extern int optind;
 	int optionCase;
@@ -62,6 +63,7 @@ void get_options(int argc, char **argv, options_t *options)
 		{
 			case 'i':
 				snprintf(options->ipAddress, 15, "%s", optarg); //Copy 15 characters of the string into ipAddress
+				missingIP = false;
 				break;
 			case 'p':
 				options->port = atoi(optarg);
@@ -73,9 +75,9 @@ void get_options(int argc, char **argv, options_t *options)
 				printUsageInfo();
 				exit(-1);
 				break;
-            case 't':
-                options->targetRPM = atoi(optarg);
-                break;
+			case 't':
+				options->targetRPM = atoi(optarg);
+				break;
 			case '?':
 				fprintf(stderr, "Missing options");
 				printUsageInfo();
@@ -86,7 +88,8 @@ void get_options(int argc, char **argv, options_t *options)
 		}
 	}
 
-	options->tolerence = (options->targetRPM)/10;
+	//Default tolerence level
+	options->tolerence = ((options->targetRPM)+1)/10;
 
 	if(options->port < 0 || options->port > 65535)
 	{
@@ -94,7 +97,12 @@ void get_options(int argc, char **argv, options_t *options)
 		throwError = true;
 	}
 
-	if(!isValidIpAddress(options->ipAddress))
+	if(missingIP)
+	{
+		fprintf(stderr, "Option -i is missing\n", options->ipAddress);
+		throwError = true;
+	}
+	else if(!isValidIpAddress(options->ipAddress))
 	{
 		fprintf(stderr, "Option -i %s \t is invalid\n", options->ipAddress);
 		throwError = true;

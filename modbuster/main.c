@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 				return -1;
 			}
 		}
-        fprintf(stdout, "Checking slave ID...");
+		fprintf(stdout, "Checking slave ID...");
 		err = modbus_report_slave_id(modbusConnection, 127, req_unit8);
 		if(err == -1)
 		{
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 			modbus_free(modbusConnection);
 			return -1;
 		}
-        fprintf(stdout, "Slave ID checked");
+		fprintf(stdout, "Slave ID checked");
 	}
 
 
@@ -121,33 +121,33 @@ int main(int argc, char **argv)
 	{
 		i = 0;
 		err = 0;
-			while(err != -1)
+		while(err != -1)
+		{
+			err = modbus_read_registers(modbusConnection, i, 1, reg);
+			if(abs(reg[0] - options.targetRPM) <= options.tolerence)
 			{
-				err = modbus_read_registers(modbusConnection, i, 1, reg);
-				if(abs(reg[0] - options.targetRPM) <= options.tolerence)
-				{
-					options.registerAddress = i;
-					break;
-				}
+				options.registerAddress = i;
+				break;
 			}
+		}
 	}
 
-    while(err != -1) //Doing it this way for now, will come up with better solution at a later time
-    {
-            err = modbus_write_register(modbusConnection, options.registerAddress, 0);
-    }
+	while(err != -1) //Doing it this way for now, will come up with better solution at a later time
+	{
+		err = modbus_write_register(modbusConnection, options.registerAddress, 0);
+	}
 
-    err = modbus_write_register(modbusConnection, options.registerAddress, 0);
-    if(err == -1)
-    {
-            fprintf(stderr, "Writing to register failed: %s\n", modbus_strerror(errno));
-            modbus_close(modbusConnection);
-            modbus_free(modbusConnection);
-            return -1;
-    }
+	err = modbus_write_register(modbusConnection, options.registerAddress, 0);
+	if(err == -1)
+	{
+		fprintf(stderr, "Writing to register failed: %s\n", modbus_strerror(errno));
+		modbus_close(modbusConnection);
+		modbus_free(modbusConnection);
+		return -1;
+	}
 
-    modbus_close(modbusConnection);
-    modbus_free(modbusConnection);
-    return 0;
+	modbus_close(modbusConnection);
+	modbus_free(modbusConnection);
+	return 0;
 }
 
