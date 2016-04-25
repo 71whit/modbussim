@@ -7,11 +7,14 @@ CC=gcc
 modbusmaster.x: modbusmaster.c
 	$(CC) -o modbusmaster.x modbusmaster.c $(INFLAGS) $(LDFLAGS)
 
+modbusreader.x: modbusreader.c
+	$(CC) -o modbusreader.x modbusreader.c $(INFLAGS) $(LDFLAGS)
+
 modbussim.x: modbussim.c
 	$(CC) -o modbussim.x modbussim.c $(INFLAGS) $(LDFLAGS)
 
 modbussim_sound.x: modbussim.c
-	$(CC) -o modbussim.x modbussim.c -D SOUND $(INFLAGS) $(LDFLAGS) $(OPTFLAGS)
+	$(CC) -o modbussim_sound.x modbussim.c -D SOUND $(INFLAGS) $(LDFLAGS) $(OPTFLAGS)
 
 clean:
 	rm -f *.o
