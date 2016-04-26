@@ -294,7 +294,7 @@ void *server( void * ptr ) {
                 modbus_set_socket(ctx, current_socket);
                 rc = modbus_receive(ctx, query);
                 if (rc > 0) {
-
+#if 0
                     /**************************************************************
                      * Explicit handling of modbus exception generation goes here 
                      **************************************************************/
@@ -341,7 +341,7 @@ void *server( void * ptr ) {
                             continue;
                         }
                     }
-
+#endif
                     /* if no errors are raised, treat it like a normal request */
                     pthread_mutex_lock( &lock );
                     modbus_reply(ctx, query, rc, mb_mapping);
