@@ -29,6 +29,7 @@ int naivePortScan(int startingPort, char *ipAddress)
 	int i, j; //Used for looping
 	int port; //return value
 	int err; //Used for checking of modbus calls
+	bool badPort;
 	modbus_t *modbusConnection;
 	uint8_t req_unit8[128]; //used to store exception info
 	uint16_t register_values[128]; //registry
@@ -46,24 +47,17 @@ int naivePortScan(int startingPort, char *ipAddress)
 		else
 		{
 			//Verify that the ip/port pair is likely modbus
-			for(j = 1; j < 12; ++j)
+			for(j = 0; j < 100; ++j)
 			{
-				err = modbus_reply_exception(modbusConnection, req_unit8, j);
+				err = modbus_read_registers(modbusConnection, 0, 2, register_values);
 				if(err == -1)
 				{
-					break; //We've found an error code that doesn't work, so break out of the loop
+					break;
 				}
 			}
-			if(j == 12)
+			if(j == 100)
 			{
-				err = modbus_read_registers(modbusConnection, 0, 1, register_values);
-				if(err == -1)
-				{
-				}
-				else
-				{
-					break; //We've found a port that might work, so break out of the loop
-				}
+				break; //We've found a port that might work, so break out of the loop
 			}
 			modbus_close(modbusConnection);
 			modbus_free(modbusConnection);
@@ -99,6 +93,7 @@ int main(int argc, char **argv)
 			fprintf(stderr, "No modbus ports found at %s\n", options.ipAddress);
 			return -1;
 		}
+		modbusConnection = modbus_new_tcp(options.ipAddress, options.port);
 	}
 	else
 	{
