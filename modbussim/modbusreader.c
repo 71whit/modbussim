@@ -46,7 +46,8 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    uint16_t *register_values = malloc((end_register - start_register + 1) * sizeof(*register_values));
+    uint16_t num_registers = end_register - start_register + 1;
+    uint16_t *register_values = malloc(num_registers * sizeof(*register_values));
 
     fprintf(stderr, " ip = %s\n port = %d\n start register = %u\n end register = %u\n freq = %d\n", ip, port, start_register, end_register, freq);
 

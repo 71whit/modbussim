@@ -42,6 +42,14 @@ void print_options( options_t *options ) {
     fprintf(stdout, "   Counter Step (0 = no counting): %d\n", options->counter_step);
 }
 
+/* Convert two continguious uint8_t elements into one uint16_t */
+void two_uint8_to_uint16(uint8_t *input, uint16_t *output) {
+    uint16_t a = input[0];
+    a = a << 8;
+    uint8_t b = input[1];
+    *output = a | b;
+}
+
 void get_options( int argc, char **argv, options_t *options ) {
     extern char *optarg;
     extern int optind;
@@ -141,8 +149,9 @@ int main(int argc, char **argv) {
 
     print_options( &options );
  
-    // get the new communication context
+    /* get the new communication context */
     ctx = modbus_new_tcp(IP, options.port);
+    
 
 #ifdef DEBUG
     modbus_set_debug(ctx, TRUE);
@@ -230,6 +239,9 @@ void *server( void * ptr ) {
 
     /* keep track of maximum fd */
     fdmax = server_socket;
+    
+    /* get header length */
+    int header_length = modbus_get_header_length(ctx);
 
     int count = 0;
     /* loop forever accepting connections */
@@ -282,12 +294,61 @@ void *server( void * ptr ) {
                 modbus_set_socket(ctx, current_socket);
                 rc = modbus_receive(ctx, query);
                 if (rc > 0) {
+
+                    /**************************************************************
+                     * Explicit handling of modbus exception generation goes here 
+                     **************************************************************/
+
+                    /* Is the function code supported? */
+                    if (query[header_length] > 0x2b) {
+                        fprintf(stderr, "Connection attempted to use an invalid function code (%d)\n", query[header_length]);
+                        /* should return exception code 01 */
+                        pthread_mutex_lock( &lock );
+                        modbus_reply_exception(ctx, query, MODBUS_EXCEPTION_ILLEGAL_FUNCTION);
+                        pthread_mutex_unlock( &lock );
+                        continue;
+                    }
+
+                    /* Function 0x03: read holding registers 
+                       This is a partial implementation of the error logic given 
+                       in figure 13 of the Modbus_Application_Protocol_V1 document */
+                    if (query[header_length] = 0x03) {
+                        /* get the requested register and the number of registers requested */
+                        uint16_t start_reg;
+                        uint8_t *uint = &query[header_length+1];
+                        two_uint8_to_uint16(uint, &start_reg);
+                        uint16_t num_reg;
+                        uint = &query[header_length+3];
+                        two_uint8_to_uint16(uint, &num_reg);
+
+                        /* Is number of registers requested within bounds? */ 
+                        if (num_reg < 1 || num_reg > MAX_NUM_REGISTERS) {
+                            fprintf(stdout, "Function 0x03: Connection requested too few or too many registers (%d)\n", num_reg);
+                            /* return exception code 03 */
+                            pthread_mutex_lock( &lock );
+                            modbus_reply_exception(ctx, query, MODBUS_EXCEPTION_ILLEGAL_DATA_VALUE);
+                            pthread_mutex_unlock( &lock );
+                            continue;
+                        }                    
+    
+                        /* are the offsets within bounds? */
+                        if (start_reg < 0 || start_reg >= options.num_registers || start_reg+num_reg-1 > (options.num_registers-1)) {
+                            fprintf(stderr, "Function 0x03: Connection requested registers out of bounds.\n");
+                            /* return exception code 02 */
+                            pthread_mutex_lock( &lock );
+                            modbus_reply_exception(ctx, query, MODBUS_EXCEPTION_ILLEGAL_DATA_ADDRESS);
+                            pthread_mutex_unlock( &lock );
+                            continue;
+                        }
+                    }
+
+                    /* if no errors are raised, treat it like a normal request */
                     pthread_mutex_lock( &lock );
                     modbus_reply(ctx, query, rc, mb_mapping);
                     pthread_mutex_unlock( &lock );
                 } else if (rc == -1) {
                     /* error or disconnect */
-                    //printf("Connection closed on socket %d\n", current_socket);
+                    printf("Connection closed on socket %d\n", current_socket);
                     close(current_socket);
 
                     /* Remove from reference set */
@@ -296,6 +357,7 @@ void *server( void * ptr ) {
                     /* decrement the max fd if this was the max */
                     if (current_socket == fdmax) {
                         fdmax--;
+
                     }
                 }
             }

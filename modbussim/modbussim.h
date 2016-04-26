@@ -48,6 +48,7 @@
 #define N_BITS (0)
 #define N_IN_BITS (0)
 #define N_IN_REGISTERS (0)
+#define MAX_NUM_REGISTERS (125) /* see modbus spec */
 
 /* simulation parameters */
 #define DEFAULT_UPDATE_FREQ (1000000000)
