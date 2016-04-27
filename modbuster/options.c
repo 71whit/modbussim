@@ -36,7 +36,7 @@ void printUsageInfo(void) {
 	fprintf(stdout, "\t-i <ip_address> \t Connect to PLC at IP address <ip_address>\n");
 	fprintf(stdout, "Options:\n");
 	fprintf(stdout, "\t-r <register> \t\t Write to PLC's register number <register>. Default is -1 for auto register scan\n");
-	fprintf(stdout, "\t-t <rpm> \t\t RPM <rpm> of target register. Default is 5000\n");
+	fprintf(stdout, "\t-t <rpm> \t\t RPM <rpm> of target register. Default is 50000\n");
 	fprintf(stdout, "\t-p <port> \t\t Connect to PLC on port number <port>. Default 0 for auto port scan\n");
 	fprintf(stdout, "\t-h \t\t\t Display this information\n");
 }
@@ -55,7 +55,7 @@ void get_options(int argc, char **argv, options_t *options)
 	//Set defaults for non required input
 	options->port = 0;
 	options->registerAddress = -1;
-	options->targetRPM = 5000;
+	options->targetRPM = 50000;
 
 	while((optionCase = getopt(argc,argv, "i:t:r:p:h")) != -1)
 	{
