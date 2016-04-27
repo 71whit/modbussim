@@ -4,7 +4,7 @@ INFLAGS=-I/usr/include/modbus/
 OPTFLAGS=-lasound
 CC=gcc
 
-modbusmaster.x: modbuswriter.c
+modbuswriter.x: modbuswriter.c
 	$(CC) -o modbuswriter.x modbuswriter.c $(INFLAGS) $(LDFLAGS)
 
 modbusregisters.x: modbusregisters.c
@@ -12,6 +12,9 @@ modbusregisters.x: modbusregisters.c
 
 modbusreader.x: modbusreader.c
 	$(CC) -o modbusreader.x modbusreader.c $(INFLAGS) $(LDFLAGS)
+
+modbusexceptions.x: modbusexceptions.c
+	$(CC) -o modbusexceptions.x modbusexceptions.c $(INFLAGS) $(LDFLAGS)
 
 modbussim.x: modbussim.c
 	$(CC) -o modbussim.x modbussim.c $(INFLAGS) $(LDFLAGS)

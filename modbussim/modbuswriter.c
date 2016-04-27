@@ -1,8 +1,21 @@
-
-/* 
+/*****************************************************************************
+ * 
+ * c 2016 Whit Schonbein
+ *
+ *****************************************************************************
+ *
+ * Author       : Whit Schonbein (schonbein [at] cs.unm.edu)
+ * Institution  : University of New Mexico, Albuquerque
+ * Year         : 2016
+ * Course       : cs544
+ *
+ ***************************************************************************** 
+ *
+ * Purpose:
+ * 
  * Writes to a register via modbus protocol.
  *
- */
+ *****************************************************************************/
 
 #include <errno.h>
 #include <stdio.h>
@@ -12,9 +25,6 @@
 #endif
 
 #include <modbus.h>
-
-#define IP "10.0.0.11"
-#define PORT (1502)
 
 int modbus_end(modbus_t *ctx) {
     modbus_close(ctx);

@@ -1,8 +1,22 @@
-/* 
+ /****************************************************************************
+ *
+ * Author       : Whit Schonbein (schonbein [at] cs.unm.edu)
+ * Institution  : University of New Mexico, Albuquerque
+ * Year         : 2016
+ * Course       : cs544
+ *
+ ***************************************************************************** 
+ *
+ * Purpose:
+ *
+ * A simple PLC simulator. Roughly, one thread services modbus requests, 
+ * and another implements a feedback loop attempting to keep the 'RPMs' 
+ * of a hypothetical device at a certain target value. The ability of the 
+ * second thread to match the target can be disrupted by modbus writes to 
+ * the RPM register, until the device `explodes'.
+ * 
  * This code started as the 'bandwidth-server-many-up.c' example from 
  * https://github.com/stephane/libmodbus.git
- *
- * Modified and expanded by Whit Schonbein Spring 2016  
  *
  * Requires the libmodbus libraries available here:
  *  https://github.com/stephane/libmodbus.git
@@ -11,7 +25,7 @@
  * Audio outout uses the alsa libraries, i.e., alsa-lib, alsa-utils, and 
  * compile with the -lasound library. 
  * 
- */
+ *****************************************************************************/
 
 #include "modbussim.h"
 
@@ -297,6 +311,9 @@ void *server( void * ptr ) {
 #if 0
                     /**************************************************************
                      * Explicit handling of modbus exception generation goes here 
+                     * Note: this apparently works for sending exception replies, 
+                     * but have not been able to figure out how to access the reply 
+                     * on the client side.
                      **************************************************************/
 
                     /* Is the function code supported? */
@@ -422,7 +439,7 @@ void *simulation( void * ptr ) {
 
         if (options.fail_threshold > 0 ) {
             if (actual_rpm > options.fail_threshold) {
-                printf("Exploding.\n");
+                printf("***** Exploding *****\n");
                 break;
             }
         }

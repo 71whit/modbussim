@@ -1,11 +1,23 @@
-
-/* 
+/*****************************************************************************
+ * 
+ * c 2016 Whit Schonbein
+ *
+ *****************************************************************************
+ *
+ * Author       : Whit Schonbein (schonbein [at] cs.unm.edu)
+ * Institution  : University of New Mexico, Albuquerque
+ * Year         : 2016
+ * Course       : cs544
+ *
+ ***************************************************************************** 
+ *
+ * Purpose:
  *
  * Reads a range of registers and outputs their values.
  *
  * Primarily used to generate modbus over tcp packets for analysis.
  *
- */
+ *****************************************************************************/
 
 #include <errno.h>
 #include <stdio.h>

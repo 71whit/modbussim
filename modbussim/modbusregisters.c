@@ -1,9 +1,21 @@
-
-/* 
+/*****************************************************************************
+ * 
+ * c 2016 Whit Schonbein
+ *
+ *****************************************************************************
+ *
+ * Author       : Whit Schonbein (schonbein [at] cs.unm.edu)
+ * Institution  : University of New Mexico, Albuquerque
+ * Year         : 2016
+ * Course       : cs544
+ *
+ ***************************************************************************** 
+ *
+ * Purpose:
  *
  * Determines number of registers in an attached PLC
  *
- */
+ ****************************************************************************/
 
 #include <errno.h>
 #include <stdio.h>
@@ -51,20 +63,7 @@ int main(int argc, char **argv) {
 
         int rc = modbus_read_registers(ctx, cur_register, 1, register_values);
         if (-1 == rc) {
-#if 0
-            /* trying to figure out where the data from a modbus_reply_exception() 
-               call on the server side goes. Can't find it... */
-            uint8_t error_code = (register_values[0] & 0xFF00) >> 8;
-            uint8_t excep_code = (register_values[0] & 0x00FF);
-            printf("error = %d exception = %d\n", error_code, excep_code);
-            printf("register values 0 = 0x%04x\n", register_values[0]);
-
-            if ( ((register_values[0] & 0xFF00) >> 8) == 0x83) {
-                printf("PLC responded with error code 0x83 and exception code whatever\n");
-            } 
-#endif
-            fprintf(stderr, "Reading registers failed (error number = %d). %s\n", errno, modbus_strerror(errno));
-
+            fprintf(stderr, "\nReading registers failed (modbus protocol exception number = %d). %s\n", errno - MODBUS_ENOBASE, modbus_strerror(errno));
             break;
         }
 
