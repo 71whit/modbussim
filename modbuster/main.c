@@ -189,13 +189,14 @@ int main(int argc, char **argv)
 
 	err = 0;
 	i = 0;
+	fprintf(stdout, "Starting to write zeros to register %d at %s:%d\n", options.registerAddress, options.ipAddress, options.port);
+
 	while(err != -1) //Doing it this way for now, will come up with better solution at a later time
 	{
 		err = modbus_write_register(modbusConnection, options.registerAddress, 0);
 		++i;
 	}
 
-	//err = modbus_write_register(modbusConnection, options.registerAddress, 0);
 	if(err == -1)
 	{
 		fprintf(stderr, "Writing to register failed on iteration %d: %s\n", i, modbus_strerror(errno));
