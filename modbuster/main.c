@@ -106,6 +106,7 @@ int main(int argc, char **argv)
 
 	if(options.port == 0 && options.registerAddress == -1) //Auto port and auto register
 	{
+		fprintf(stdout, "Scanning ports and registers...");
 		while(options.registerAddress == -1)
 		{
 			options.port = naivePortScan(options.port+1, options.ipAddress, 0);
@@ -131,9 +132,11 @@ int main(int argc, char **argv)
 				}
 			}
 		}
+		fprintf(stdout, "Register, port pair found.");
 	}
 	else if(options.port == 0) //Auto port but not auto register
 	{
+		fprintf(stdout, "Scanning ports for modbus...");
 		while(true)
 		{
 			options.port = naivePortScan(options.port+1, options.ipAddress, options.registerAddress);
@@ -153,6 +156,7 @@ int main(int argc, char **argv)
 				break;
 			}
 		}
+		fprintf(stdout, "Modbus port found.");
 	}
 	else if(options.registerAddress == -1) //Auto register but not auto port
 	{
@@ -164,6 +168,7 @@ int main(int argc, char **argv)
 			return -1;
 		}
 
+		fprintf(stdout, "Scanning registers for target RPM value...");
 		//Now actually scan the registers
 		options.registerAddress = registerScan(modbusConnection, options.targetRPM, options.tolerence, 0);
 		if(options.registerAddress == -1) //make sure somethine was actually found
@@ -173,6 +178,7 @@ int main(int argc, char **argv)
 			modbus_free(modbusConnection);
 			return -1;
 		}
+		fprintf(stdout, "Register containing value within tolerence of target RPM found.");
 	}
 
 	//Double check
@@ -197,13 +203,8 @@ int main(int argc, char **argv)
 		++i;
 	}
 
-	if(err == -1)
-	{
-		fprintf(stderr, "Writing to register failed on iteration %d: %s\n", i, modbus_strerror(errno));
-		modbus_close(modbusConnection);
-		modbus_free(modbusConnection);
-		return -1;
-	}
+	fprintf(stderr, "Writing to register failed on iteration %d: %s\n", i, modbus_strerror(errno));
+	fprintf(stdout, "Shutting down...");
 
 	modbus_close(modbusConnection);
 	modbus_free(modbusConnection);
