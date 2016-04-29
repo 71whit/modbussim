@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 
 	if(options.port == 0 && options.registerAddress == -1) //Auto port and auto register
 	{
-		fprintf(stdout, "Scanning ports and registers...");
+		fprintf(stdout, "Scanning ports and registers...\n");
 		while(options.registerAddress == -1)
 		{
 			options.port = naivePortScan(options.port+1, options.ipAddress, 0);
@@ -132,11 +132,11 @@ int main(int argc, char **argv)
 				}
 			}
 		}
-		fprintf(stdout, "Register, port pair found.");
+		fprintf(stdout, "Register, port pair found.\n");
 	}
 	else if(options.port == 0) //Auto port but not auto register
 	{
-		fprintf(stdout, "Scanning ports for modbus...");
+		fprintf(stdout, "Scanning ports for modbus...\n");
 		while(true)
 		{
 			options.port = naivePortScan(options.port+1, options.ipAddress, options.registerAddress);
@@ -156,7 +156,7 @@ int main(int argc, char **argv)
 				break;
 			}
 		}
-		fprintf(stdout, "Modbus port found.");
+		fprintf(stdout, "Modbus port found.\n");
 	}
 	else if(options.registerAddress == -1) //Auto register but not auto port
 	{
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
 			return -1;
 		}
 
-		fprintf(stdout, "Scanning registers for target RPM value...");
+		fprintf(stdout, "Scanning registers for target RPM value...\n");
 		//Now actually scan the registers
 		options.registerAddress = registerScan(modbusConnection, options.targetRPM, options.tolerence, 0);
 		if(options.registerAddress == -1) //make sure somethine was actually found
@@ -178,20 +178,28 @@ int main(int argc, char **argv)
 			modbus_free(modbusConnection);
 			return -1;
 		}
-		fprintf(stdout, "Register containing value within tolerence of target RPM found.");
+		fprintf(stdout, "Register containing value within tolerence of target RPM found.\n");
 	}
-
-	//Double check
-	err = modbus_read_registers(modbusConnection, options.registerAddress, 1, register_values);
-	if (err == -1)
+	else
 	{
-		print_options(&options);
-		fprintf(stderr, "Reading register failed: %s\n", modbus_strerror(errno));
-		modbus_close(modbusConnection);
-		modbus_free(modbusConnection);
-		return -1;
+		modbusConnection = modbus_new_tcp(options.ipAddress, options.port);
+		if(modbus_connect(modbusConnection) == -1)
+		{
+			fprintf(stderr, "Connection failed: %s\n", modbus_strerror(errno));
+			modbus_free(modbusConnection);
+			return -1;
+		}
+		//Check the register is valid
+		err = modbus_read_registers(modbusConnection, options.registerAddress, 1, register_values);
+		if (err == -1)
+		{
+			print_options(&options);
+			fprintf(stderr, "Reading register failed: %s\n", modbus_strerror(errno));
+			modbus_close(modbusConnection);
+			modbus_free(modbusConnection);
+			return -1;
+		}
 	}
-
 
 	err = 0;
 	i = 0;
