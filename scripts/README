@@ -1,0 +1,12 @@
+
+This directory contains scripts from the modbus project.
+
+The toolchain for these scripts as used in the project is:
+    (1) Capture tcp packets to get .pcap file
+    (2) Run extract_registers.bro on the file to get modbus_registers_extract.log
+        (alternatively, use the bro script in real time to generate log file)
+    (3) Run extract_registers_transpose.py to transform the log file into one that 
+        can more easily be graphed.
+    (4) Run plot_extract_registers_transpose.py to generate plot.
+
+

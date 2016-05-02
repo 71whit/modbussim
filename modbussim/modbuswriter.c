@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
             return -1;
         }
 
-        fprintf(stdout, "Before writing, the value of register at address %04x = %X\n", address, register_values[0]);
+        fprintf(stdout, "Before writing, the value of register at address %04x = %d\n", address, register_values[0]);
 
         int wc = modbus_write_register(ctx, (int)address, (int)value );
         if (-1 == wc) {
@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
             return -1;
         }
 
-        fprintf(stdout, "After writing, the value of register at address %04x = %X\n", address, register_values[0]);
+        fprintf(stdout, "After writing, the value of register at address %04x = %d\n", address, register_values[0]);
 
         if (freq == 0) break;
         
