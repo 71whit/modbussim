@@ -21,12 +21,6 @@
 #include <errno.h>
 #include <modbus.h>
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <unistd.h>
-#endif
-
 #include "options.h"
 
 
@@ -100,6 +94,13 @@ int main(int argc, char **argv)
 	options_t options;
 	modbus_t *modbusConnection;
 	uint16_t register_values[1];
+	//just for auto scanning
+	int numRegisters = -1;
+	int registersToWrite[128]; //Used for writting to many registers
+	for(i = 0; i < 128; ++i)
+	{
+		registersToWrite[i] = -1;
+	}
 
 	get_options(argc, argv, &options);
 	print_options(&options);
@@ -107,7 +108,7 @@ int main(int argc, char **argv)
 	if(options.port == 0 && options.registerAddress == -1) //Auto port and auto register
 	{
 		fprintf(stdout, "Scanning ports and registers...\n");
-		while(options.registerAddress == -1)
+		while(numRegisters < 1)
 		{
 			options.port = naivePortScan(options.port+1, options.ipAddress, 0);
 			if(options.port == -1)
@@ -124,8 +125,16 @@ int main(int argc, char **argv)
 					continue; //False positive so find a new port to try
 				}
 
-				options.registerAddress = registerScan(modbusConnection, options.targetRPM, options.tolerence, 0);
-				if(options.registerAddress == -1)
+				for(i = 0; i < 128; ++i)
+				{
+					registersToWrite[i] = registerScan(modbusConnection, options.targetRPM, options.tolerence, registersToWrite[(i-1)+128 % 128]+1);
+					if(registersToWrite[i] == -1)
+					{
+						numRegisters = i;
+						break; // break out of for loop
+					}
+				}
+				if(numRegisters < 1)
 				{
 					modbus_close(modbusConnection);
 					modbus_free(modbusConnection);
@@ -170,8 +179,16 @@ int main(int argc, char **argv)
 
 		fprintf(stdout, "Scanning registers for target RPM value...\n");
 		//Now actually scan the registers
-		options.registerAddress = registerScan(modbusConnection, options.targetRPM, options.tolerence, 0);
-		if(options.registerAddress == -1) //make sure somethine was actually found
+		for(i = 0; i < 128; ++i)
+		{
+			registersToWrite[i] = registerScan(modbusConnection, options.targetRPM, options.tolerence, registersToWrite[(i-1)+128 % 128]+1);
+			if(registersToWrite[i] == -1)
+			{
+				numRegisters = i;
+				break; // break out of for loop
+			}
+		}
+		if(numRegisters < 1) //make sure somethine was actually found
 		{
 			fprintf(stderr, "No registers found within expected range at %s:%d\n", options.ipAddress, options.port);
 			modbus_close(modbusConnection);
@@ -201,18 +218,49 @@ int main(int argc, char **argv)
 		}
 	}
 
-	err = 0;
-	i = 0;
-	fprintf(stdout, "Starting to write zeros to register %d at %s:%d\n", options.registerAddress, options.ipAddress, options.port);
-
-	while(err != -1) //Doing it this way for now, will come up with better solution at a later time
+	if(options.registerAddress != -1)
 	{
-		err = modbus_write_register(modbusConnection, options.registerAddress, 0);
-		++i;
+		err = 0;
+		i = 0;
+		fprintf(stdout, "Starting to write zeros to register %d at %s:%d\n", options.registerAddress, options.ipAddress, options.port);
+
+		while(err != -1) //Doing it this way for now, will come up with better solution at a later time
+		{
+			err = modbus_write_register(modbusConnection, options.registerAddress, 0);
+			++i;
+		}
+
+		fprintf(stderr, "Writing to register failed on iteration %d: %s\n", i, modbus_strerror(errno));
+	}
+	else
+	{
+		bool breakLoop = false;
+		i = 0;
+		fprintf(stdout, "Starting to write zeros to %d register(s) at %s:%d\n", numRegisters, options.ipAddress, options.port);
+		while(!breakLoop)
+		{
+			breakLoop = true;
+			for(j = 0; j < numRegisters; ++j)
+			{
+				if(registersToWrite[j] != -1)
+				{
+					err = modbus_write_register(modbusConnection, registersToWrite[j], 0);
+					if(err == -1)
+					{
+						registersToWrite[j] = -1;
+					}
+					else
+					{
+						breakLoop = false;
+					}
+				}
+			}
+			++i;
+		}
+		fprintf(stderr, "Writing to register(s) failed on iteration %d: %s\n", i, modbus_strerror(errno));
 	}
 
-	fprintf(stderr, "Writing to register failed on iteration %d: %s\n", i, modbus_strerror(errno));
-	fprintf(stdout, "Shutting down...");
+	fprintf(stdout, "Shutting down...\n");
 
 	modbus_close(modbusConnection);
 	modbus_free(modbusConnection);
