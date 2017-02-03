@@ -7,7 +7,8 @@ industrial systems.
 This project was developed for educational purposes: CS544 Cybersecurity, University of New 
 Mexico, Spring 2016.
 
-Authors: **Whit Schonbein** (schonbein [at] cs.unm.edu) and **Evan Dye** (etdye [at] cs.unm.edu).
+Authors: **Whit Schonbein** (schonbein [at] cs.unm.edu) and **Evan Dye** (etdye [at] cs.unm.edu). A [writeup](http://www.whitschonbein.com/documents/dye-schonbein-cs544-report.pdf) of 
+the attacks we explored using `modbussim` can be found [here](http://www.whitschonbein.com/documents/dye-schonbein-cs544-report.pdf).
 
 ## Components
 
